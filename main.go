@@ -1,30 +1,45 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	// "github.com/PuerkitoBio/goquery"
+	"strconv"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
-var baseURL string = "https://kr.indeed.com/jobs?q=springboot&limit=50"
+var baseURL string = "https://kr.indeed.com/jobs?q=python&limit=50"
 
 func main() {
-	getPages()
+	totlaPages := getPages()
+
+	for i := 0; i < totlaPages; i++ {
+		getPage(i)
+	}
+}
+
+func getPage(page int) {
+	pageURL := baseURL + "&start=" + strconv.Itoa(page*50)
+	fmt.Println("requesting", pageURL)
 }
 
 func getPages() int {
+	pages := 0
 	res, err := http.Get(baseURL)
 	checkError(err)
 	checkCode(res)
 
 	defer res.Body.Close()
 
-	// doc, err := goquery.NewDocumentFromReader(res.Body)
-	// checkError(err)
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	checkError(err)
 
-	// fmt.Println(doc)
+	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {
+		pages = s.Find("a").Length()
+	})
 
-	return 0
+	return pages
 }
 
 func checkError(err error) {
