@@ -31,7 +31,7 @@ func getPage(page int) {
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	checkError(err)
 
-	searchCards := doc.Find(".tapItem")
+	searchCards := doc.Find(".jobsearch-SerpJobCard")
 
 	searchCards.Each(func(i int, s *goquery.Selection) {
 		fmt.Println(s)
