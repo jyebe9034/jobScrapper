@@ -24,10 +24,15 @@ var baseURL string = "https://kr.indeed.com/jobs?q=python&limit=50"
 
 func main() {
 	var jobs []extractedJob
+	c := make(chan []extractedJob)
 	totlaPages := getPages()
 
 	for i := 0; i < totlaPages; i++ {
-		extractJobs := getPage(i)
+		go getPage(i, c)
+	}
+
+	for i := 0; i < totlaPages; i++ {
+		extractJobs := <-c
 		jobs = append(jobs, extractJobs...)
 	}
 
@@ -35,29 +40,11 @@ func main() {
 	fmt.Println("Done, extracted ", len(jobs))
 }
 
-func writeJobs(jobs []extractedJob) {
-	file, err := os.Create("jobs.csv")
-	checkError(err)
-
-	w := csv.NewWriter(file)
-	defer w.Flush() // 파일에 데이터를 입력하는 함수
-
-	headers := []string{"Link", "Title", "Location", "Salary", "Summary"}
-
-	wErr := w.Write(headers)
-	checkError(wErr)
-
-	for _, job := range jobs {
-		jobSlice := []string{"https://kr.indeed.com/viewjob?jk=" + job.id, job.title, job.location, job.salary, job.summary}
-		jwErr := w.Write(jobSlice)
-		checkError(jwErr)
-	}
-}
-
-func getPage(page int) []extractedJob {
+func getPage(page int, mainC chan<- []extractedJob) {
 	var jobs []extractedJob
 	c := make(chan extractedJob)
 	pageURL := baseURL + "&start=" + strconv.Itoa(page*50)
+	fmt.Println("Request: " + pageURL)
 	res, err := http.Get(pageURL)
 	checkError(err)
 	checkCode(res)
@@ -78,7 +65,7 @@ func getPage(page int) []extractedJob {
 		jobs = append(jobs, job)
 	}
 
-	return jobs
+	mainC <- jobs
 }
 
 func extractJob(card *goquery.Selection, c chan<- extractedJob) {
@@ -116,6 +103,26 @@ func getPages() int {
 	})
 
 	return pages
+}
+
+func writeJobs(jobs []extractedJob) {
+	file, err := os.Create("jobs.csv")
+	checkError(err)
+
+	w := csv.NewWriter(file)
+	defer w.Flush() // 파일에 데이터를 입력하는 함수
+
+	headers := []string{"Link", "Title", "Location", "Salary", "Summary"}
+
+	wErr := w.Write(headers)
+	checkError(wErr)
+
+	// 이부분도 go routine으로 변경해 보기
+	for _, job := range jobs {
+		jobSlice := []string{"https://kr.indeed.com/viewjob?jk=" + job.id, job.title, job.location, job.salary, job.summary}
+		jwErr := w.Write(jobSlice)
+		checkError(jwErr)
+	}
 }
 
 func checkError(err error) {
