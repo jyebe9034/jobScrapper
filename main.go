@@ -1,7 +1,15 @@
 package main
 
-import "github.com/jyebe9034/jobScrapper/scrapper"
+import (
+	"net/http"
+)
+
+func handleHome(c echo.Context) error {
+	return c.String(http.StatusOK, "Hello, World!")
+}
 
 func main() {
-	scrapper.Scrape("python")
+	e := echo.New()
+	e.Get("/", handleHome)
+	e.Logger.Fatal(e.Start(":1323"))
 }
